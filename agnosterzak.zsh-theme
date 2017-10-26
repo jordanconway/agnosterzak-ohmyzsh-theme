@@ -136,20 +136,21 @@ prompt_battery() {
     fi
   fi
 
-  if [[ $(uname) == "Linux" && -d /sys/module/battery ]] ; then
+  if [[ $(uname) == "Linux"  ]] ; then
 
     function battery_is_charging() {
-      ! [[ $(acpi 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]]
+      ! [[ $(acpi|grep -v 'rate information unavailable' 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]]
     }
 
     function battery_pct() {
       if (( $+commands[acpi] )) ; then
-        echo "$(acpi | cut -f2 -d ',' | tr -cd '[:digit:]')"
+        #echo "$(acpi | cut -f2 -d ',' | tr -cd '[:digit:]')"
+        echo "( $(acpi |grep -v 'rate information unavailable'| cut -d"%" -f1|cut -d" " -f4 | head -1) + $(acpi |grep -v 'rate information unavailable'| cut -d"%" -f1|cut -d" " -f4 | tail -1) )" / 2|bc
       fi
     }
 
     function battery_pct_remaining() {
-      if [ ! $(battery_is_charging) ] ; then
+      if  [ ! $(battery_is_charging) ] ; then
         battery_pct
       else
         echo "External Power"
@@ -163,7 +164,7 @@ prompt_battery() {
     }
 
     b=$(battery_pct_remaining)
-    if [[ $(acpi 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]] ; then
+    if [[ $(acpi|grep -v 'rate information unavailable' 2&>/dev/null | grep -c '^Battery.*Discharging') -gt 0 ]] ; then
       if [ $b -gt 40 ] ; then
         prompt_segment green white
       elif [ $b -gt 20 ] ; then
@@ -341,6 +342,23 @@ prompt_virtualenv() {
   fi
 }
 
+# aws_account() goes in .zshrc
+# aws_account() {
+#   if [ -d ~/.aws.$1 ]
+#   then
+#     unlink ~/.aws
+#     ln -sf ~/.aws.$1 ~/.aws
+#   else
+#     echo "Unable to link aws $1"
+#   fi
+# }
+prompt_awsenv() {
+  local awsenv_name=$(basename `readlink -sf ~/.aws`)
+  if [[ "${awsenv_name##.aws.}" != "none" ]]; then
+    prompt_segment yellow red "aws:${awsenv_name##.aws.}"
+  fi
+}
+
 prompt_time() {
   prompt_segment blue white "%{$fg_bold[white]%}%D{%a %e %b - %H:%M}%{$fg_no_bold[white]%}"
 }
@@ -366,6 +384,7 @@ build_prompt() {
   prompt_status
   prompt_battery
   prompt_time
+  prompt_awsenv
   prompt_virtualenv
   prompt_dir
   prompt_git
