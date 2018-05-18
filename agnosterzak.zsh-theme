@@ -396,4 +396,14 @@ build_prompt() {
   prompt_end
 }
 
+aws_account() {
+  if [ -d ~/.aws.$1 ]
+  then
+    unlink ~/.aws
+    ln -sf ~/.aws.$1 ~/.aws
+  else
+    echo "Unable to link aws $1"
+  fi
+}
+
 PROMPT='%{%f%b%k%}$(build_prompt) '
